@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard TMA TMR CSAT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="titulo">
+        <span>META SEMANAL</span>
+        <h1>TMA, TMR e CSAT</h1>
+      </div>
+      <div class="importar-planilha">
+        <label for="planilha">Importar planilha</label>
+        <input id="planilha" type="file" accept=".xlsx,.xls">
+      </div>
+    </header>
+
+    <section id="cards" class="cards" aria-label="Indicadores"></section>
+  </main>
+
+  <script>
+    const dadosEstaticos = {
+      cards: [
+        {
+          indicador: "TMA",
+          nome: "Tempo M&eacute;dio de Atendimento",
+          meta: "at&eacute; 45m00s",
+          semana_passada: "1h16m16s",
+          semana_atual: "54m29s",
+          diferenca: "-21m47s",
+          status: "Aten&ccedil;&atilde;o",
+          status_classe: "fora",
+          diferenca_classe: "melhor"
+        },
+        {
+          indicador: "TMR",
+          nome: "Tempo M&eacute;dio de Resposta",
+          meta: "at&eacute; 2m40s",
+          semana_passada: "5m04s",
+          semana_atual: "3m27s",
+          diferenca: "-1m37s",
+          status: "Aten&ccedil;&atilde;o",
+          status_classe: "fora",
+          diferenca_classe: "melhor"
+        },
+        {
+          indicador: "CSAT",
+          nome: "Qualidade Percebida na Avalia&ccedil;&atilde;o Geral",
+          meta: "4,50",
+          semana_passada: "4,41",
+          semana_atual: "4,45",
+          diferenca: "+0,04",
+          status: "Aten&ccedil;&atilde;o",
+          status_classe: "fora",
+          diferenca_classe: "melhor"
+        }
+      ]
+    };
+
+    function renderizar(dados) {
+      const container = document.getElementById("cards");
+      container.innerHTML = "";
+
+      for (const item of dados.cards) {
+        const statusVisual = item.status === "Fora da meta" ? "Aten&ccedil;&atilde;o" : item.status;
+        const card = document.createElement("article");
+        card.className = `card ${item.status_classe} card-${item.indicador.toLowerCase()}`;
+        card.innerHTML = `
+          <div class="card-topo">
+            <div>
+              <h2>${item.indicador}</h2>
+              <p>${item.nome}</p>
+            </div>
+            <span class="status ${item.status_classe}">${statusVisual}</span>
+          </div>
+          <div class="valor-principal">
+            <div class="meta-principal">
+              <span>Meta</span>
+              <strong>${item.meta}</strong>
+            </div>
+            <span>Semana atual</span>
+            <strong>${item.semana_atual}</strong>
+          </div>
+          <div class="grade-dados">
+            <div class="linha"><span>Semana passada</span><strong>${item.semana_passada}</strong></div>
+            <div class="linha"><span>Diferen&ccedil;a</span><strong class="${item.diferenca_classe}">${item.diferenca}</strong></div>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    async function carregarDados() {
+      try {
+        const resposta = await fetch("/api/dados");
+        if (!resposta.ok) throw new Error("Falha ao carregar dados");
+        renderizar(await resposta.json());
+      } catch {
+        renderizar(dadosEstaticos);
+      }
+    }
+
+    document.getElementById("planilha").addEventListener("change", async (event) => {
+      const arquivo = event.target.files[0];
+      if (!arquivo) return;
+
+      const backendJava = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      if (!backendJava) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("planilha", arquivo);
+
+      const resposta = await fetch("/api/importar", {
+        method: "POST",
+        body: formData
+      });
+
+      if (resposta.ok) {
+        renderizar(await resposta.json());
+      }
+    });
+
+    carregarDados();
+  </script>
+</body>
+</html>
